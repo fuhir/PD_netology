@@ -25,9 +25,9 @@ def password_reset_token_created(sender, instance, reset_password_token, **kwarg
 
     msg = EmailMultiAlternatives(
         # title:
-        f"Password Reset Token for {reset_password_token.user}",
+        f"Сброс пароля для {reset_password_token.user}",
         # message:
-        reset_password_token.key,
+        f"Ваш токен для сброса пароля: {reset_password_token.key}",
         # from:
         settings.EMAIL_HOST_USER,
         # to:
@@ -39,16 +39,16 @@ def password_reset_token_created(sender, instance, reset_password_token, **kwarg
 @receiver(new_user_registered)
 def new_user_registered_signal(user_id, **kwargs):
     """
-    отправляем письмо с подтрердждением почты
+    отправляем письмо с подтвердждением почты
     """
     # send an e-mail to the user
     token, _ = ConfirmEmailToken.objects.get_or_create(user_id=user_id)
 
     msg = EmailMultiAlternatives(
         # title:
-        f"Please confirm email - Token: {token.user.email}",
+        f"Пожалуйста подтвердите свою почту: {token.user.email}",
         # message:
-        token.key,
+        f"Ваш токен для подтверждения почты: {token.key}",
         # from:
         settings.EMAIL_HOST_USER,
         # to:

@@ -1,4 +1,5 @@
 from distutils.util import strtobool
+
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
@@ -27,7 +28,7 @@ class RegisterAccount(APIView):
     Для регистрации покупателей
     """
     # Регистрация методом POST
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
 
         # проверяем обязательные аргументы
         if {'first_name', 'last_name', 'email', 'password', 'company', 'position'}.issubset(request.data):
@@ -68,7 +69,7 @@ class ConfirmAccount(APIView):
     Класс для подтверждения почтового адреса
     """
     # Регистрация методом POST
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
 
         # проверяем обязательные аргументы
         if {'email', 'token'}.issubset(request.data):
@@ -92,7 +93,7 @@ class AccountDetails(APIView):
     """
 
     # получить данные
-    def get(self, request, *args, **kwargs):
+    def get(self, request):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
@@ -100,7 +101,7 @@ class AccountDetails(APIView):
         return Response(serializer.data)
 
     # Редактирование методом POST
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
         # проверяем обязательные аргументы
@@ -133,7 +134,7 @@ class LoginAccount(APIView):
     Класс для авторизации пользователей
     """
     # Авторизация методом POST
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
 
         if {'email', 'password'}.issubset(request.data):
             user = authenticate(request, username=request.data['email'], password=request.data['password'])
@@ -169,7 +170,7 @@ class ProductInfoView(APIView):
     """
     Класс для поиска товаров
     """
-    def get(self, request, *args, **kwargs):
+    def get(self, request):
 
         query = Q(shop__state=True)
         shop_id = request.query_params.get('shop_id')
@@ -198,7 +199,7 @@ class BasketView(APIView):
     """
 
     # получить корзину
-    def get(self, request, *args, **kwargs):
+    def get(self, request):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
         basket = Order.objects.filter(
@@ -211,7 +212,7 @@ class BasketView(APIView):
         return Response(serializer.data)
 
     # редактировать корзину
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
@@ -243,7 +244,7 @@ class BasketView(APIView):
         return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
 
     # удалить товары из корзины
-    def delete(self, request, *args, **kwargs):
+    def delete(self, request):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
@@ -264,7 +265,7 @@ class BasketView(APIView):
         return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
 
     # добавить позиции в корзину
-    def put(self, request, *args, **kwargs):
+    def put(self, request):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
@@ -290,7 +291,7 @@ class PartnerUpdate(APIView):
     """
     Класс для обновления прайса от поставщика
     """
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
@@ -342,7 +343,7 @@ class PartnerState(APIView):
     """
 
     # получить текущий статус
-    def get(self, request, *args, **kwargs):
+    def get(self, request):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
@@ -354,7 +355,7 @@ class PartnerState(APIView):
         return Response(serializer.data)
 
     # изменить текущий статус
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
@@ -375,7 +376,7 @@ class PartnerOrders(APIView):
     """
     Класс для получения заказов поставщиками
     """
-    def get(self, request, *args, **kwargs):
+    def get(self, request):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
@@ -391,6 +392,27 @@ class PartnerOrders(APIView):
         serializer = OrderSerializer(order, many=True)
         new_order.send(sender=self.__class__, user_id=request.user.id)
         return Response(serializer.data)
+    
+    
+    def put(self, request):
+        """
+        Изменение статуса заказа
+        """
+        if not request.user.is_authenticated:
+            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+        if request.user.type != 'shop':
+            return JsonResponse({'Status': False, 'Error': 'Только для магазинов'}, status=403)
+        if 'id' in request.data:
+            if request.data['id'].isdigit():
+                order = Order.objects.filter(id=request.data['id']).first()
+                if order:
+                    serializer = OrderSerializer(order, data=request.data, partial=True)
+                    if serializer.is_valid():
+                        serializer.save()
+                        return JsonResponse({'Status': True})
+                    else:
+                        return JsonResponse({'Status': False, 'Errors': serializer.errors})
+        return JsonResponse({'Status': False, 'Errors': 'Некорректный id'})
 
 
 class ContactView(APIView):
@@ -399,7 +421,7 @@ class ContactView(APIView):
     """
 
     # получить мои контакты
-    def get(self, request, *args, **kwargs):
+    def get(self, request):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
         contact = Contact.objects.filter(
@@ -408,7 +430,7 @@ class ContactView(APIView):
         return Response(serializer.data)
 
     # добавить новый контакт
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
@@ -426,7 +448,7 @@ class ContactView(APIView):
         return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
 
     # удалить контакт
-    def delete(self, request, *args, **kwargs):
+    def delete(self, request):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
@@ -446,7 +468,7 @@ class ContactView(APIView):
         return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
 
     # редактировать контакт
-    def put(self, request, *args, **kwargs):
+    def put(self, request):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
@@ -471,7 +493,7 @@ class OrderView(APIView):
     """
 
     # получить мои заказы
-    def get(self, request, *args, **kwargs):
+    def get(self, request):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
         order = Order.objects.filter(
@@ -484,7 +506,7 @@ class OrderView(APIView):
         return Response(serializer.data)
 
     # разместить заказ из корзины
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
