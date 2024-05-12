@@ -14,14 +14,14 @@ STATE_CHOICES = (
     ('delivered', 'Доставлен'),
     ('canceled', 'Отменен'),
 )
-
+    
 USER_TYPE_CHOICES = (
     ('shop', 'Магазин'),
     ('buyer', 'Покупатель'),
 
-)
-
-
+    )
+  
+  
 # Create your models here.
 
 
