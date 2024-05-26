@@ -20,7 +20,8 @@ from .models import Shop, Category, Product, ProductInfo, Parameter, ProductPara
     Contact, ConfirmEmailToken
 from .serializers import UserSerializer, CategorySerializer, ShopSerializer, ProductInfoSerializer, \
     OrderItemSerializer, OrderSerializer, ContactSerializer
-from .signals import new_user_registered, new_order
+# from .signals import new_user_registered, new_order
+from .tasks import send_test_email_task, new_order_task, new_user_registered_task, password_reset_token_created_task
 
 
 class RegisterAccount(APIView):
@@ -56,7 +57,8 @@ class RegisterAccount(APIView):
                     user = user_serializer.save()
                     user.set_password(request.data['password'])
                     user.save()
-                    new_user_registered.send(sender=self.__class__, user_id=user.id)
+                    class_name = self.__class__.__name__  # Get the class name as a string
+                    new_user_registered_task.delay(user_id=user.id, sender_class=class_name)
                     return JsonResponse({'Status': True})
                 else:
                     return JsonResponse({'Status': False, 'Errors': user_serializer.errors})
@@ -390,7 +392,7 @@ class PartnerOrders(APIView):
             total_sum=Sum(F('ordered_items__quantity') * F('ordered_items__product_info__price'))).distinct()
 
         serializer = OrderSerializer(order, many=True)
-        new_order.send(sender=self.__class__, user_id=request.user.id)
+        # new_order.send(sender=self.__class__, user_id=request.user.id)
         return Response(serializer.data)
     
     
@@ -522,7 +524,14 @@ class OrderView(APIView):
                     return JsonResponse({'Status': False, 'Errors': 'Неправильно указаны аргументы'})
                 else:
                     if is_updated:
-                        new_order.send(sender=self.__class__, user_id=request.user.id)
+                        new_order_task.delay(sender=self.__class__, user_id=request.user.id, order_id=request.data['id'],order_status='new')
                         return JsonResponse({'Status': True})
 
         return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+    
+    
+    # тестовый view для настройки celery
+class TestEmailView(APIView):
+    def get(self, request):
+        send_test_email_task.delay(email_address='cko4ik@gmail.com', message='HI')
+        return JsonResponse({'Status': True})

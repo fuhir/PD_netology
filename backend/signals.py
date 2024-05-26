@@ -3,11 +3,14 @@ from django.core.mail import EmailMultiAlternatives
 from django.dispatch import receiver, Signal
 from django_rest_passwordreset.signals import reset_password_token_created
 
-from .models import ConfirmEmailToken, User
+from .models import ConfirmEmailToken, User, Order, Shop
+from dotenv import load_dotenv
 
-new_user_registered = Signal()
-order_update = Signal()
-new_order = Signal()
+
+load_dotenv()
+new_user_registered = Signal('user_id')
+
+new_order = Signal('user_id')
 
 
 @receiver(reset_password_token_created)
@@ -63,7 +66,7 @@ def new_order_signal(user_id, **kwargs):
     отправяем письмо при изменении статуса заказа
     """
     # send an e-mail to the user
-    user = User.objects.get(id=user_id)
+    user =  User.objects.get(id=user_id)
 
     msg = EmailMultiAlternatives(
         # title:

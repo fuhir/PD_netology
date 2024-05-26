@@ -1,9 +1,21 @@
-from django.urls import path
+from django.urls import path, include
 from django_rest_passwordreset.views import reset_password_request_token, reset_password_confirm
-
-from .views import PartnerUpdate, RegisterAccount, LoginAccount, CategoryView, ShopView, ProductInfoView, \
-    BasketView, \
-    AccountDetails, ContactView, OrderView, PartnerState, PartnerOrders, ConfirmAccount
+from .views import (
+    PartnerUpdate,
+    PartnerState,
+    PartnerOrders,
+    RegisterAccount,
+    ConfirmAccount,
+    AccountDetails,
+    ContactView,
+    LoginAccount,
+    CategoryView,
+    ShopView,
+    ProductInfoView,
+    BasketView,
+    OrderView,
+    TestEmailView
+)
 
 app_name = 'backend'
 urlpatterns = [
@@ -22,5 +34,5 @@ urlpatterns = [
     path('products', ProductInfoView.as_view(), name='shops'),
     path('basket', BasketView.as_view(), name='basket'),
     path('order', OrderView.as_view(), name='order'),
-
+    path('testemail/', TestEmailView.as_view(), name='testemail'),
 ]
