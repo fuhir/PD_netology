@@ -22,6 +22,8 @@ from .serializers import UserSerializer, CategorySerializer, ShopSerializer, Pro
     OrderItemSerializer, OrderSerializer, ContactSerializer
 # from .signals import new_user_registered, new_order
 from .tasks import send_test_email_task, new_order_task, new_user_registered_task, password_reset_token_created_task
+from django_rest_passwordreset.views import ResetPasswordRequestToken
+from django_rest_passwordreset.models import ResetPasswordToken
 
 
 class RegisterAccount(APIView):
@@ -184,7 +186,7 @@ class ProductInfoView(APIView):
         if category_id:
             query = query & Q(product__category_id=category_id)
 
-        # фильтруем и отбрасываем дуликаты
+        # фильтруем и отбрасываем дубликаты
         queryset = ProductInfo.objects.filter(
             query).select_related(
             'shop', 'product__category').prefetch_related(
@@ -515,19 +517,16 @@ class OrderView(APIView):
         if {'id', 'contact'}.issubset(request.data):
             if request.data['id'].isdigit():
                 try:
-                    is_updated = Order.objects.filter(
-                        user_id=request.user.id, id=request.data['id']).update(
-                        contact_id=request.data['contact'],
-                        state='new')
+                    order_id = request.data['id']
+                    order_status = 'new'
+                    new_order_task.delay(user_id=request.user.id, order_id=order_id, order_status=order_status)
+                    return JsonResponse({'Status': True})
                 except IntegrityError as error:
                     print(error)
-                    return JsonResponse({'Status': False, 'Errors': 'Неправильно указаны аргументы'})
-                else:
-                    if is_updated:
-                        new_order_task.delay(sender=self.__class__, user_id=request.user.id, order_id=request.data['id'],order_status='new')
-                        return JsonResponse({'Status': True})
+                    return JsonResponse({'Status': False, 'Errors': 'Wrong arguments'})
 
-        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+        return JsonResponse({'Status': False, 'Errors': 'Required arguments are not specified'})
+
     
     
     # тестовый view для настройки celery
@@ -535,3 +534,19 @@ class TestEmailView(APIView):
     def get(self, request):
         send_test_email_task.delay(email_address='cko4ik@gmail.com', message='HI')
         return JsonResponse({'Status': True})
+    
+    
+class CustomResetPasswordRequestToken(ResetPasswordRequestToken):
+    """
+    Reset password token request customization
+    """
+
+    def create(self, request, *args, **kwargs):
+        response = super().create(request, *args, **kwargs)
+        email = request.data.get('email')
+        reset_password_token = ResetPasswordToken.objects.filter(user__email=email).first()
+
+        if reset_password_token:
+            password_reset_token_created_task.delay(email, reset_password_token)
+
+        return response

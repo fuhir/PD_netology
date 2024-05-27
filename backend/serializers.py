@@ -1,3 +1,4 @@
+from decimal import Decimal
 from rest_framework import serializers
 
 from .models import User, Category, Shop, ProductInfo, Product, ProductParameter, OrderItem, Order, Contact
@@ -86,3 +87,7 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = ('id', 'ordered_items', 'state', 'dt', 'total_sum', 'contact',)
         read_only_fields = ('id',)
+
+def get_total_sum(self, obj):
+        total_sum = sum(Decimal(item.product_info.price) * item.quantity for item in obj.ordered_items.all())
+        return float(total_sum)
