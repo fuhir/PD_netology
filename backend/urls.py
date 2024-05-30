@@ -21,4 +21,5 @@ urlpatterns = [
     path('basket', BasketView.as_view(), name='basket'),
     path('order', OrderView.as_view(), name='order'),
     path('testemail/', TestEmailView.as_view(), name='testemail'),
+    path('user/current/', CurrentUserView.as_view(), name='current_user'),
 ]

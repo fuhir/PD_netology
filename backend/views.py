@@ -14,6 +14,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from ujson import loads as load_json
 from yaml import load as load_yaml, Loader
+from rest_framework.permissions import IsAuthenticated
 
 
 from .models import *
@@ -192,6 +193,17 @@ class ProductInfoView(APIView):
 
         serializer = ProductInfoSerializer(queryset, many=True)
 
+        return Response(serializer.data)
+    
+class CurrentUserView(APIView):
+    """
+    View for getting current user
+    """
+    permission_classes = (IsAuthenticated,)
+    throttle_scope = 'current_user'
+
+    def get(self, request):
+        serializer = UserSerializer(request.user)
         return Response(serializer.data)
 
 
