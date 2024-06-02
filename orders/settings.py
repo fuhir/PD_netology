@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     #'crispy_forms',
     #'crispy_bootstrap4',
     'drf_spectacular',
+    'social_django',
 ]
 
 MIDDLEWARE = [
@@ -56,6 +57,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'social_django.middleware.SocialAuthExceptionMiddleware',
 ]
 
 ROOT_URLCONF = 'orders.urls'
@@ -71,6 +73,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'social_django.context_processors.backends',
             ],
         },
     },
@@ -129,6 +132,21 @@ EMAIL_ADMIN = EMAIL_HOST_USER
 
 CELERY_BROKER_URL = "redis://localhost:6379"
 CELERY_RESULT_BACKEND = "redis://localhost:6379"
+
+AUTHENTICATION_BACKENDS = [
+    'social_core.backends.google.GoogleOAuth2',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.getenv('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY')
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.getenv('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET')
+
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_URL = 'logout'
+
+SOCIAL_AUTH_URL_NAMESPACE = 'social'
+SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {'prompt': 'consent'}
 
 
 REST_FRAMEWORK = {

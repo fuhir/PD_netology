@@ -1,5 +1,5 @@
 from distutils.util import strtobool
-
+from django.shortcuts import render
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
@@ -136,6 +136,8 @@ class LoginAccount(APIView):
     """
     Класс для авторизации пользователей
     """
+    def get(self, request):
+        return render(request, 'login.html')
     # Авторизация методом POST
     def post(self, request):
 
@@ -197,7 +199,7 @@ class ProductInfoView(APIView):
     
 class CurrentUserView(APIView):
     """
-    View for getting current user
+    Класс для получения информации о текущем пользователе
     """
     permission_classes = (IsAuthenticated,)
     throttle_scope = 'current_user'
