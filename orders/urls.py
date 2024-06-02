@@ -21,12 +21,11 @@ from django.conf import settings
 from django.contrib.auth import logout
 
 urlpatterns = [
-    
+    path('jet/', include('jet.urls', 'jet')),  # Django JET URLS
     path('admin/', admin.site.urls),
     path('', include('backend.urls')),
-    
+    path('jet/dashboard/', include('jet.dashboard.urls', 'jet-dashboard')),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='docs'),
-    
     path('social-auth/', include('social_django.urls', namespace='social')),
 ]
