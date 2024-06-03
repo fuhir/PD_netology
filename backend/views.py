@@ -23,48 +23,41 @@ from .serializers import *
 from .tasks import send_test_email_task, new_order_task, new_user_registered_task, password_reset_token_created_task
 from django_rest_passwordreset.views import ResetPasswordRequestToken
 from django_rest_passwordreset.models import ResetPasswordToken
+from django.core.files.base import ContentFile
+from rest_framework import status
+from rest_framework.exceptions import ValidationError
 
 
 class RegisterAccount(APIView):
     """
-    Для регистрации покупателей
+    Класс для регистрации нового пользователя
     """
-    # Регистрация методом POST
-    def post(self, request):
-
-        # проверяем обязательные аргументы
-        if {'first_name', 'last_name', 'email', 'password', 'company', 'position'}.issubset(request.data):
+def post(self, request):
+        if {'email', 'password'}.issubset(request.data):
             errors = {}
-            print(request.data)
-
-            # проверяем пароль на сложность
 
             try:
                 validate_password(request.data['password'])
-            except Exception as password_error:
-                error_array = []
-                # noinspection PyTypeChecker
-                for item in password_error:
-                    error_array.append(item)
-                return JsonResponse({'Status': False, 'Errors': {'password': error_array}})
-            else:
-                # проверяем данные для уникальности имени пользователя
-                if isinstance(request.data, QueryDict):
-                    request.data._mutable = True
-                request.data.update({})
-                user_serializer = UserSerializer(data=request.data)
-                if user_serializer.is_valid():
-                    # сохраняем пользователя
-                    user = user_serializer.save()
-                    user.set_password(request.data['password'])
-                    user.save()
-                    class_name = self.__class__.__name__  # Get the class name as a string
-                    new_user_registered_task.delay(user_id=user.id, sender_class=class_name)
-                    return JsonResponse({'Status': True})
-                else:
-                    return JsonResponse({'Status': False, 'Errors': user_serializer.errors})
+            except ValidationError as password_error:
+                error_array = [str(error) for error in password_error]
+                return JsonResponse({'Status': False, 'Errors': {'password': error_array}}, status=400)
 
-        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+            avatar_url = request.data.pop('avatar', None)
+
+            user_serializer = UserSerializer(data=request.data)
+            if user_serializer.is_valid():
+                user = user_serializer.save()
+                user.set_password(request.data['password'])
+                user.save()
+                print(user.id)
+                class_name = self.__class__.__name__
+                new_user_registered_task.delay(user_id=user.id, sender_class=class_name)
+
+                return JsonResponse({'Status': True})
+            else:
+                return JsonResponse({'Status': False, 'Errors': user_serializer.errors}, status=400)
+
+        return JsonResponse({'Status': False, 'Errors': 'Missing required fields (email, password)'}, status=400)
 
 
 class ConfirmAccount(APIView):

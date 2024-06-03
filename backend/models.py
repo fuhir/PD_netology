@@ -1,9 +1,9 @@
-from django.contrib.auth.base_user import BaseUserManager
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_rest_passwordreset.tokens import get_token_generator
+from easy_thumbnails.fields import ThumbnailerImageField
 
 STATE_CHOICES = (
     ('basket', 'Корзина'),
@@ -79,6 +79,15 @@ class User(AbstractUser):
             'unique': _("A user with that username already exists."),
         },
     )
+    avatar = ThumbnailerImageField(
+        _('Avatar'),
+        upload_to='avatars/',
+        null=True,
+        blank=True,
+        help_text=_('Upload an image for the user avatar.'),
+        resize_source=dict(size=(300, 300), crop='smart'))
+    first_name = models.CharField(_('first name'), max_length=150, blank=True)
+    last_name = models.CharField(_('last name'), max_length=150, blank=True)
     is_active = models.BooleanField(
         _('active'),
         default=False,
