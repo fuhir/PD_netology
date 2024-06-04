@@ -163,6 +163,12 @@ class ProductInfo(models.Model):
     quantity = models.PositiveIntegerField(verbose_name='Количество')
     price = models.PositiveIntegerField(verbose_name='Цена')
     price_rrc = models.PositiveIntegerField(verbose_name='Рекомендуемая розничная цена')
+    product_image = ThumbnailerImageField(
+            _('Product_image'),
+            upload_to='product_images/',
+            null=True,
+            blank=True,
+            resize_source=dict(size=(600, 600), crop='smart', upscale=False))
 
     class Meta:
         verbose_name = 'Информация о продукте'

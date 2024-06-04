@@ -313,7 +313,7 @@ class PartnerUpdate(APIView):
             try:
                 validate_url(url)
             except ValidationError as e:
-                return JsonResponse({'Status': False, 'Error': str(e)})
+                return JsonResponse({'Status': False, 'Error': str(e)}, status=400)
             else:
                 stream = get(url).content
 
@@ -327,6 +327,20 @@ class PartnerUpdate(APIView):
                 ProductInfo.objects.filter(shop_id=shop.id).delete()
                 for item in data['goods']:
                     product, _ = Product.objects.get_or_create(name=item['name'], category_id=item['category'])
+                    if item.get('product_image'):
+                        product_image_url = item.pop('product_image')
+                        print(product_image_url)
+
+                        product_info = ProductInfo.objects.create(
+                            product=product,
+                            external_id=item['id'],
+                            model=item['model'],
+                            price=item['price'],
+                            price_rrc=item['price_rrc'],
+                            quantity=item['quantity'],
+                            shop_id=shop.id,
+                            # product_image=ContentFile(response.content, name=filename),
+                        )
 
                     product_info = ProductInfo.objects.create(product_id=product.id,
                                                               external_id=item['id'],
@@ -343,7 +357,7 @@ class PartnerUpdate(APIView):
 
                 return JsonResponse({'Status': True})
 
-        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'}, status=400)
 
 
 class PartnerState(APIView):
