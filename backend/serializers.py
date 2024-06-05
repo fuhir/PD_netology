@@ -16,7 +16,7 @@ class ContactSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     contacts = ContactSerializer(read_only=True, many=True)
-    avatar = serializers.ImageField(write_only=True)
+    avatar = serializers.ImageField(write_only=True, required=False, default = None)
 
     class Meta:
         model = User
@@ -57,7 +57,7 @@ class ProductParameterSerializer(serializers.ModelSerializer):
 class ProductInfoSerializer(serializers.ModelSerializer):
     product = ProductSerializer(read_only=True)
     product_parameters = ProductParameterSerializer(read_only=True, many=True)
-    product_image = serializers.ImageField(write_only=True)
+    product_image = serializers.ImageField(write_only=True, required=False, default = None)
 
     class Meta:
         model = ProductInfo

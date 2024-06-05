@@ -2,15 +2,19 @@ import json
 
 from celery import shared_task
 from django.conf import settings
+from django.core.files.base import ContentFile
 from django.core.mail import EmailMultiAlternatives
 from django.dispatch import receiver, Signal
+from django.http import JsonResponse
 # from django_rest_passwordreset.signals import reset_password_token_created
 import os
 from django.contrib.auth.models import User
 from .serializers import OrderSerializer
-from .models import ConfirmEmailToken, User, Order, Shop
+from .models import ConfirmEmailToken, User, Order, Shop, Product, ProductInfo
 from dotenv import load_dotenv
 from django.shortcuts import get_object_or_404
+
+import requests
 
 
 load_dotenv()
@@ -21,6 +25,9 @@ new_order = Signal('user_id')
 
 @shared_task()
 def send_test_email_task(email_address, message):
+    """
+    Celery task for sending test email
+    """
     msg = EmailMultiAlternatives(
         subject=f"Test message for {email_address}",
         body=message,
@@ -29,6 +36,27 @@ def send_test_email_task(email_address, message):
     )
     msg.send()
 
+@shared_task()
+def upload_product_image_task(product_info_id, product_image_url):
+    try:
+        product_info = ProductInfo.objects.get(id=product_info_id)
+        response = requests.get(product_image_url)
+        product_info.product_image.save(f'Product id {product_info.product_id}', ContentFile(response.content), save=True)
+
+    except ProductInfo.DoesNotExist:
+        pass
+
+
+
+@shared_task()
+def upload_avatar_task(user_id, avatar_url):
+    try:
+        user = User.objects.get(id=user_id)
+        response = requests.get(avatar_url)
+        user.avatar.save(f'User_ID_{user_id}_avatar', ContentFile(response.content), save=True)
+
+    except User.DoesNotExist:
+        pass
 
 @shared_task()
 def password_reset_token_created_task(sender, instance, reset_password_token, **kwargs):

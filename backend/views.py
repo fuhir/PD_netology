@@ -20,7 +20,8 @@ from rest_framework.permissions import IsAuthenticated
 from .models import *
 from .serializers import *
 # from .signals import new_user_registered, new_order
-from .tasks import send_test_email_task, new_order_task, new_user_registered_task, password_reset_token_created_task
+from .tasks import send_test_email_task, new_order_task, new_user_registered_task, password_reset_token_created_task, \
+    upload_product_image_task, upload_avatar_task
 from django_rest_passwordreset.views import ResetPasswordRequestToken
 from django_rest_passwordreset.models import ResetPasswordToken
 from django.core.files.base import ContentFile
@@ -51,6 +52,7 @@ def post(self, request):
                 user.save()
                 print(user.id)
                 class_name = self.__class__.__name__
+                upload_avatar_task.delay(user_id=user.id, avatar_url=avatar_url)
                 new_user_registered_task.delay(user_id=user.id, sender_class=class_name)
 
                 return JsonResponse({'Status': True})
@@ -136,7 +138,7 @@ class LoginAccount(APIView):
 
         if {'email', 'password'}.issubset(request.data):
             user = authenticate(request, username=request.data['email'], password=request.data['password'])
-
+            print(user)
             if user is not None:
                 if user.is_active:
                     token, _ = Token.objects.get_or_create(user=user)
@@ -324,7 +326,9 @@ class PartnerUpdate(APIView):
                     category_object, _ = Category.objects.get_or_create(id=category['id'], name=category['name'])
                     category_object.shops.add(shop.id)
                     category_object.save()
+                    
                 ProductInfo.objects.filter(shop_id=shop.id).delete()
+                
                 for item in data['goods']:
                     product, _ = Product.objects.get_or_create(name=item['name'], category_id=item['category'])
                     if item.get('product_image'):
@@ -341,14 +345,23 @@ class PartnerUpdate(APIView):
                             shop_id=shop.id,
                             # product_image=ContentFile(response.content, name=filename),
                         )
+                        
+                        upload_product_image_task.delay(product_info.id, product_image_url)
+                        
+                    for name, value in item['parameters'].items():
+                            parameter_object, _ = Parameter.objects.get_or_create(name=name)
+                            ProductParameter.objects.create(product_info=product_info, parameter=parameter_object,
+                                                            value=value)
 
-                    product_info = ProductInfo.objects.create(product_id=product.id,
+                    else:
+                        product_info = ProductInfo.objects.create(product_id=product.id,
                                                               external_id=item['id'],
                                                               model=item['model'],
                                                               price=item['price'],
                                                               price_rrc=item['price_rrc'],
                                                               quantity=item['quantity'],
                                                               shop_id=shop.id)
+                        
                     for name, value in item['parameters'].items():
                         parameter_object, _ = Parameter.objects.get_or_create(name=name)
                         ProductParameter.objects.create(product_info_id=product_info.id,

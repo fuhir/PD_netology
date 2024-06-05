@@ -81,7 +81,7 @@ class User(AbstractUser):
     )
     avatar = ThumbnailerImageField(
         _('Avatar'),
-        upload_to='avatars/',
+        upload_to='user_avatars/',
         null=True,
         blank=True,
         help_text=_('Upload an image for the user avatar.'),
