@@ -15,6 +15,7 @@ from rest_framework.views import APIView
 from ujson import loads as load_json
 from yaml import load as load_yaml, Loader
 from rest_framework.permissions import IsAuthenticated
+import sentry_sdk
 
 
 from .models import *
@@ -135,19 +136,24 @@ class LoginAccount(APIView):
         return render(request, 'login.html')
     # Авторизация методом POST
     def post(self, request):
+        try:
+            if {'email', 'password'}.issubset(request.data):
+                user = authenticate(request, username=request.data['email'], password=request.data['password'])
+                print(user)
+                if user is not None:
+                    if user.is_active:
+                        token, _ = Token.objects.get_or_create(user=user)
 
-        if {'email', 'password'}.issubset(request.data):
-            user = authenticate(request, username=request.data['email'], password=request.data['password'])
-            print(user)
-            if user is not None:
-                if user.is_active:
-                    token, _ = Token.objects.get_or_create(user=user)
-
+                        User.objects.update_last_login(None, user)
                     return JsonResponse({'Status': True, 'Token': token.key})
 
-            return JsonResponse({'Status': False, 'Errors': 'Не удалось авторизовать'})
+            return sentry_sdk.capture_message("Login unsuccessful. Sent to Sentry")
+                # return JsonResponse({'Status': False, 'Errors': 'Authentication is not successful'})
 
-        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+            return JsonResponse({'Status': False, 'Errors': 'Required arguments are not specified'})
+
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
 
 
 class CategoryView(ListAPIView):
